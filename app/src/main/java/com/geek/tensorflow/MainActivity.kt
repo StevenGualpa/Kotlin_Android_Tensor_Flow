@@ -1,10 +1,14 @@
 package com.geek.tensorflow
 
 import android.Manifest
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.media.ThumbnailUtils
+import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
 import android.view.View
@@ -12,6 +16,8 @@ import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import com.geek.tensorflow.ml.Model
 import org.tensorflow.lite.DataType
 import org.tensorflow.lite.support.tensorbuffer.TensorBuffer
@@ -22,7 +28,7 @@ import java.nio.ByteOrder
 class MainActivity : AppCompatActivity() {
 
     var imageSize = 224
-   lateinit var ImgCaptura : ImageView
+    lateinit var ImgCaptura : ImageView
     lateinit var resultado : TextView
     lateinit var confianza : TextView
 
@@ -126,8 +132,33 @@ class MainActivity : AppCompatActivity() {
         }
         //MensajeLargo(s)
         confianza.setText(s)
+        notification("Excelente",classes[maxPos])
     }
 
+    fun notification(titu: String,descrp:String) {
 
+        val chanelid="chat"
+        val chanelname="chat"
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+        {
+            val importancia= NotificationManager.IMPORTANCE_HIGH
+            val channel= NotificationChannel(chanelid, chanelname,importancia)
+
+            //Manager de Notificacion
+            val manager=getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            manager.createNotificationChannel(channel)
+
+            val notification= NotificationCompat.Builder(this, chanelid).also { noti->
+                noti.setContentTitle(titu)
+                noti.setContentText(descrp)
+                noti.setSmallIcon(R.drawable.iconots)
+            }.build()
+
+            val NotificationManager= NotificationManagerCompat.from(applicationContext)
+            NotificationManager.notify(1, notification)
+        }
+
+    }
 
 }
