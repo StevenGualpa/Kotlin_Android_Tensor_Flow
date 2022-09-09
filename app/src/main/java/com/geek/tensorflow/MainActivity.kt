@@ -1,11 +1,133 @@
 package com.geek.tensorflow
 
-import androidx.appcompat.app.AppCompatActivity
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.media.ThumbnailUtils
 import android.os.Bundle
+import android.provider.MediaStore
+import android.view.View
+import android.widget.ImageView
+import android.widget.TextView
+import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
+import com.geek.tensorflow.ml.Model
+import org.tensorflow.lite.DataType
+import org.tensorflow.lite.support.tensorbuffer.TensorBuffer
+import java.io.IOException
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 
 class MainActivity : AppCompatActivity() {
+
+    var imageSize = 224
+   lateinit var ImgCaptura : ImageView
+    lateinit var resultado : TextView
+    lateinit var confianza : TextView
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        ImgCaptura = findViewById<ImageView>(R.id.ImgCamara)
+        resultado=findViewById(R.id.txtresultado)
+        confianza=findViewById(R.id.txtcoincidencia)
+
     }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        if (requestCode == 1 && resultCode == RESULT_OK) {
+            var image = data!!.extras!!["data"] as Bitmap?
+            val dimension = Math.min(image!!.width, image.height)
+            image = ThumbnailUtils.extractThumbnail(image, dimension, dimension)
+            ImgCaptura.setImageBitmap(image)
+            image = Bitmap.createScaledBitmap(image, imageSize, imageSize, false)
+            ClasificarImagen(image)
+        }
+        super.onActivityResult(requestCode, resultCode, data)
+    }
+
+    fun CapturaFoto(view: View?) {
+        // Iniciar cámara si tenemos permiso
+        if (checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+            val cameraIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+            startActivityForResult(cameraIntent, 1)
+        } else {
+            //Solicitar permiso de cámara si no lo tenemos.
+            requestPermissions(arrayOf(Manifest.permission.CAMERA), 100)
+        }
+    }
+    fun MensajeLargo(Mensaje: String) {
+        Toast.makeText(this, Mensaje.toString(), Toast.LENGTH_LONG).show()
+
+    }
+
+    fun ClasificarImagen(image: Bitmap) {
+        try {
+            val model = Model.newInstance(applicationContext)
+
+            // Creates inputs for reference.
+            val inputFeature0 =
+                TensorBuffer.createFixedSize(intArrayOf(1, 224, 224, 3), DataType.FLOAT32)
+            val byteBuffer = ByteBuffer.allocateDirect(4 * imageSize * imageSize * 3)
+            byteBuffer.order(ByteOrder.nativeOrder())
+
+            // get 1D array of 224 * 224 pixels in image
+            val intValues = IntArray(imageSize * imageSize)
+            image.getPixels(intValues, 0, image.width, 0, 0, image.width, image.height)
+
+            // iterate over pixels and extract R, G, and B values. Add to bytebuffer.
+            var pixel = 0
+            for (i in 0 until imageSize) {
+                for (j in 0 until imageSize) {
+                    val `val` = intValues[pixel++] // RGB
+                    byteBuffer.putFloat((`val` shr 16 and 0xFF) * (1f / 255f))
+                    byteBuffer.putFloat((`val` shr 8 and 0xFF) * (1f / 255f))
+                    byteBuffer.putFloat((`val` and 0xFF) * (1f / 255f))
+                }
+            }
+            inputFeature0.loadBuffer(byteBuffer)
+
+            // Runs model inference and gets result.
+            val outputs = model.process(inputFeature0)
+            val outputFeature0 = outputs.outputFeature0AsTensorBuffer
+            val confidences = outputFeature0.floatArray
+
+
+            val classes = arrayOf("Agrarias", "Agropecuaria", "Biblioteca", "Enfermerias","FCI","Laboratorio")
+
+            // find the index of the class with the biggest confidence.
+            ExtraeDatos(confidences,classes)
+
+            // Releases model resources if no longer used.
+            model.close()
+        } catch (e: IOException) {
+            // TODO Handle the exception
+        }
+    }
+
+    fun ExtraeDatos(confidences: FloatArray, classes: Array<String>)
+    {
+        var maxPos = 0
+        var maxConfidence = 0f
+
+        for (i in confidences.indices) {
+            if (confidences[i] > maxConfidence) {
+                maxConfidence = confidences[i]
+                maxPos = i
+            }
+        }
+
+
+        resultado.setText(classes[maxPos])
+        var s = ""
+        for (i in classes.indices) {
+            s += String.format("%s: %.1f%%\n", classes[i], confidences[i] * 100)
+        }
+        //MensajeLargo(s)
+        confianza.setText(s)
+    }
+
+
+
 }
