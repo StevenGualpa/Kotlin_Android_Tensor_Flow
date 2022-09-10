@@ -11,6 +11,7 @@ import android.media.ThumbnailUtils
 import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
+import android.util.Log
 import android.view.View
 import android.widget.ImageView
 import android.widget.TextView
@@ -18,7 +19,12 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import com.android.volley.Request
+import com.android.volley.toolbox.StringRequest
+import com.android.volley.toolbox.Volley
 import com.geek.tensorflow.ml.Model
+import org.json.JSONArray
+import org.json.JSONObject
 import org.tensorflow.lite.DataType
 import org.tensorflow.lite.support.tensorbuffer.TensorBuffer
 import java.io.IOException
@@ -133,6 +139,7 @@ class MainActivity : AppCompatActivity() {
         //MensajeLargo(s)
         confianza.setText(s)
         notification("Excelente",classes[maxPos])
+        DescargarMarcadores(classes[maxPos])
     }
 
     fun notification(titu: String,descrp:String) {
@@ -161,4 +168,41 @@ class MainActivity : AppCompatActivity() {
 
     }
 
+    fun DescargarMarcadores(parm1: String)
+    {
+        val queue = Volley.newRequestQueue(this)
+        val url: String = "https://my-json-server.typicode.com/StevenGualpa/Api_Uteq_MarketPlace/Edificios"
+
+        // Request a string response from the provided URL.
+        val stringReq = StringRequest(
+            Request.Method.GET, url,
+            { response ->
+                var strResp = response.toString()
+                var str: JSONArray = JSONArray(strResp)
+
+                //Contador
+                var index=0
+                //Cantidad de Elementos
+                var n=str.length()
+                //Variables auxiliares  que usaremos
+
+                //MensajeLargo(n.toString())
+                while (index<n) {
+                    var elemento: JSONObject = str.getJSONObject(index)
+
+                    if(elemento.getString("Titulo").contains(parm1))
+                    {
+                        var parametros: String=""
+                        parametros=resultado.text.toString() +"\n"+ elemento.getString("Ubicacion")+"\n"+ elemento.getString("Latitude")+";"+ elemento.getString("Longitude")
+                        resultado.text=parametros
+                        index=1000
+                    }
+
+                    index++
+
+                }
+            },
+            { Log.d("API", "that didn't work") })
+        queue.add(stringReq)
+    }
 }

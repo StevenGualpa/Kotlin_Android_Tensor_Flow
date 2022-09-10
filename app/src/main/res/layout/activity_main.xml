@@ -74,13 +74,12 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_below="@id/txttituloclass"
+            android:layout_centerHorizontal="true"
             android:layout_marginStart="10dp"
             android:text=""
             android:textColor="@color/black"
-            android:textSize="27sp"
-            android:textStyle="bold"
-            android:layout_centerHorizontal="true"
-            />
+            android:textSize="10sp"
+            android:textStyle="bold" />
 
     </RelativeLayout>
 
